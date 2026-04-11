@@ -1,0 +1,14 @@
+{
+  "name": "edu-platform",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm run start:dev --prefix apps/main-api\" \"npm run dev --prefix apps/image-worker\"",
+    "dev:api": "npm run start:dev --prefix apps/main-api",
+    "dev:worker": "npm run dev --prefix apps/image-worker",
+    "install:all": "npm install --prefix apps/main-api && npm install --prefix apps/image-worker"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.0"
+  }
+}
