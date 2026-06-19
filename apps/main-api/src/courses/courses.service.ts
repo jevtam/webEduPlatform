@@ -8,11 +8,14 @@ import { CreateCourseDto } from './dto/create-course.dto';
 import { ForbiddenException } from '@nestjs/common';
 import { UpdateCourseDto } from './dto/update-course.dto';
 
+import { UsersService } from '../users/users.service';
+
 @Injectable()
 export class CoursesService {
   constructor(
     @InjectModel(Course.name)
     private readonly courseModel: Model<CourseDocument>,
+    private readonly usersService: UsersService,
   ) {}
 
   async create(createCourseDto: CreateCourseDto, teacherId: string) {
@@ -71,6 +74,34 @@ export class CoursesService {
 
     return {
       message: 'Course deleted successfully',
+    };
+  }
+
+  async enroll(courseId: string, studentId: string) {
+    const course = await this.findById(courseId);
+    const user = await this.usersService.findById(studentId);
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (user.enrolledCourses.includes(courseId)) {
+      return {
+        message: 'Student already enrolled',
+        courseId,
+        studentId,
+      };
+    }
+
+    await this.usersService.addEnrolledCourse(studentId, courseId);
+
+    course.studentsCount += 1;
+    await course.save();
+
+    return {
+      message: 'Student enrolled successfully',
+      courseId,
+      studentId,
     };
   }
 }

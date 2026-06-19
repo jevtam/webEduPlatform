@@ -30,4 +30,24 @@ export class UsersService {
 
     return user.save();
   }
+
+  async addEnrolledCourse(userId: string, courseId: string) {
+    return this.userModel
+      .findByIdAndUpdate(
+        userId,
+        {
+          $addToSet: {
+            enrolledCourses: courseId,
+          },
+        },
+        {
+          new: true,
+        },
+      )
+      .exec();
+  }
+
+  async findById(userId: string) {
+    return this.userModel.findById(userId).exec();
+  }
 }

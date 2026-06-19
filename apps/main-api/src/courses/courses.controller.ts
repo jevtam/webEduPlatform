@@ -61,4 +61,11 @@ export class CoursesController {
   remove(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
     return this.coursesService.remove(id, user.sub);
   }
+
+  @Post(':id/enroll')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.STUDENT)
+  enroll(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    return this.coursesService.enroll(id, user.sub);
+  }
 }

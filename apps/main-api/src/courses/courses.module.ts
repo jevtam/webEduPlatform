@@ -8,6 +8,8 @@ import { CoursesService } from './courses.service';
 import { CoursesController } from './courses.controller';
 import { Course, CourseSchema } from './schemas/course.schema';
 
+import { UsersModule } from '../users/users.module';
+
 @Module({
   imports: [
     JwtModule.registerAsync({
@@ -33,6 +35,7 @@ import { Course, CourseSchema } from './schemas/course.schema';
         schema: CourseSchema,
       },
     ]),
+    UsersModule
   ],
   controllers: [CoursesController],
   providers: [CoursesService],
