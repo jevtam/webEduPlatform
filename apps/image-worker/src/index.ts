@@ -7,6 +7,13 @@ dotenv.config({ path: "../../.env" });
 const app = express();
 const port = Number(process.env.WORKER_PORT || 3001);
 
+const kafka = new Kafka({
+  clientId: "edu-platform",
+  brokers: [process.env.KAFKA_BROKER!],
+});
+
+const producer = kafka.producer();
+
 app.use(express.json());
 
 app.get("/health", (_req, res) => {
@@ -27,6 +34,7 @@ async function startKafkaConsumer() {
   });
 
   await consumer.connect();
+  await producer.connect();
   await consumer.subscribe({
     topic: "image.uploaded",
     fromBeginning: false,
@@ -76,4 +84,17 @@ setTimeout(async () => {
     .toFile("../../uploads/processed/test-cover-processed.jpg");
 
   console.log("IMAGE PROCESSED");
+  await producer.send({
+    topic: "image.processed",
+    messages: [
+      {
+        value: JSON.stringify({
+          status: "success",
+          processedAt: new Date().toISOString(),
+        }),
+      },
+    ],
+  });
+
+  console.log("Kafka event image.processed sent");
 }, 3000);
