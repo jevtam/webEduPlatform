@@ -8,6 +8,7 @@ import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { CoursesModule } from './courses/courses.module';
 import { LessonsModule } from './lessons/lessons.module';
+import { KafkaModule } from './kafka/kafka.module';
 
 @Module({
   imports: [
@@ -25,12 +26,10 @@ import { LessonsModule } from './lessons/lessons.module';
     }),
 
     UsersModule,
-
     AuthModule,
-
     CoursesModule,
-
     LessonsModule,
+    KafkaModule,
   ],
   controllers: [AppController],
   providers: [AppService],
