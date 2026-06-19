@@ -10,13 +10,24 @@ import { UpdateCourseDto } from './dto/update-course.dto';
 
 import { UsersService } from '../users/users.service';
 
+import { RedisService } from '../redis/redis.service';
+
 @Injectable()
 export class CoursesService {
   constructor(
     @InjectModel(Course.name)
     private readonly courseModel: Model<CourseDocument>,
     private readonly usersService: UsersService,
+    private readonly redisService: RedisService,
   ) {}
+
+  private async invalidateCourseCache(courseId?: string) {
+    await this.redisService.del('courses:all');
+
+    if (courseId) {
+      await this.redisService.del(`courses:${courseId}`);
+    }
+  }
 
   async create(createCourseDto: CreateCourseDto, teacherId: string) {
     const course = new this.courseModel({
@@ -25,18 +36,52 @@ export class CoursesService {
     });
 
     return course.save();
+    const savedCourse = await course.save();
+    await this.invalidateCourseCache(savedCourse._id.toString());
+    return savedCourse;
   }
 
   async findAll() {
-    return this.courseModel.find().sort({ createdAt: -1 }).exec();
+    const cacheKey = 'courses:all';
+
+    const cachedCourses = await this.redisService.get(cacheKey);
+
+    if (cachedCourses) {
+      console.log('COURSES FROM REDIS');
+      return cachedCourses;
+    }
+
+    console.log('COURSES FROM MONGO');
+
+    const courses = await this.courseModel
+      .find()
+      .sort({ createdAt: -1 })
+      .exec();
+
+    await this.redisService.set(cacheKey, courses, 60);
+
+    return courses;
   }
 
   async findById(id: string) {
+    const cacheKey = `courses:${id}`;
+
+    const cachedCourse = await this.redisService.get(cacheKey);
+
+    if (cachedCourse) {
+      console.log('COURSES FROM REDIS');
+      return cachedCourse as CourseDocument;
+    }
+
+    console.log('COURSE FROM MONGO');
+
     const course = await this.courseModel.findById(id).exec();
 
     if (!course) {
       throw new NotFoundException('Course not found');
     }
+
+    await this.redisService.set(cacheKey, course, 60);
 
     return course;
   }
@@ -46,7 +91,7 @@ export class CoursesService {
     updateCourseDto: UpdateCourseDto,
     teacherId: string,
   ) {
-    const course = await this.findById(id);
+    const course = await this.findDocumentById(id);
 
     if (course.teacherId !== teacherId) {
       throw new ForbiddenException('Only course owner can update course');
@@ -60,11 +105,14 @@ export class CoursesService {
       course.description = updateCourseDto.description;
     }
 
+    const updatedCourse = await course.save();
+    await this.invalidateCourseCache(id);
+    return updatedCourse;
     return course.save();
   }
 
   async remove(id: string, teacherId: string) {
-    const course = await this.findById(id);
+    const course = await this.findDocumentById(id);
 
     if (course.teacherId !== teacherId) {
       throw new ForbiddenException('Only course owner can delete course');
@@ -72,13 +120,16 @@ export class CoursesService {
 
     await course.deleteOne();
 
+    await course.deleteOne();
+    await this.invalidateCourseCache(id);
+
     return {
       message: 'Course deleted successfully',
     };
   }
 
   async enroll(courseId: string, studentId: string) {
-    const course = await this.findById(courseId);
+    const course = await this.findDocumentById(courseId);
     const user = await this.usersService.findById(studentId);
 
     if (!user) {
@@ -98,10 +149,22 @@ export class CoursesService {
     course.studentsCount += 1;
     await course.save();
 
+    await this.invalidateCourseCache(courseId);
+
     return {
       message: 'Student enrolled successfully',
       courseId,
       studentId,
     };
+  }
+
+  async findDocumentById(id: string) {
+    const course = await this.courseModel.findById(id).exec();
+
+    if (!course) {
+      throw new NotFoundException('Course not found');
+    }
+
+    return course;
   }
 }

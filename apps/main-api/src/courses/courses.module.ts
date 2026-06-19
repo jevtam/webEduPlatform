@@ -10,6 +10,8 @@ import { Course, CourseSchema } from './schemas/course.schema';
 
 import { UsersModule } from '../users/users.module';
 
+import { RedisModule } from '../redis/redis.module';
+
 @Module({
   imports: [
     JwtModule.registerAsync({
@@ -17,9 +19,8 @@ import { UsersModule } from '../users/users.module';
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
         const secret = configService.get<string>('JWT_SECRET') || 'dev_secret';
-        const expiresIn =
-          (configService.get<string>('JWT_EXPIRES_IN') ||
-            '7d') as SignOptions['expiresIn'];
+        const expiresIn = (configService.get<string>('JWT_EXPIRES_IN') ||
+          '7d') as SignOptions['expiresIn'];
 
         return {
           secret,
@@ -35,7 +36,8 @@ import { UsersModule } from '../users/users.module';
         schema: CourseSchema,
       },
     ]),
-    UsersModule
+    UsersModule,
+    RedisModule,
   ],
   controllers: [CoursesController],
   providers: [CoursesService],
