@@ -11,6 +11,7 @@ import { Course, CourseSchema } from './schemas/course.schema';
 import { UsersModule } from '../users/users.module';
 
 import { RedisModule } from '../redis/redis.module';
+import { KafkaModule } from '../kafka/kafka.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { RedisModule } from '../redis/redis.module';
     ]),
     UsersModule,
     RedisModule,
+    KafkaModule,
   ],
   controllers: [CoursesController],
   providers: [CoursesService],

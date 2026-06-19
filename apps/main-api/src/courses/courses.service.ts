@@ -11,6 +11,8 @@ import { UpdateCourseDto } from './dto/update-course.dto';
 import { UsersService } from '../users/users.service';
 
 import { RedisService } from '../redis/redis.service';
+import { KafkaService } from '../kafka/kafka.service';
+import { ImageStatus } from './schemas/course.schema';
 
 @Injectable()
 export class CoursesService {
@@ -19,6 +21,7 @@ export class CoursesService {
     private readonly courseModel: Model<CourseDocument>,
     private readonly usersService: UsersService,
     private readonly redisService: RedisService,
+    private readonly kafkaService: KafkaService,
   ) {}
 
   private async invalidateCourseCache(courseId?: string) {
@@ -166,5 +169,40 @@ export class CoursesService {
     }
 
     return course;
+  }
+
+  async uploadCover(
+    courseId: string,
+    file: Express.Multer.File,
+    teacherId: string,
+  ) {
+    const course = await this.findDocumentById(courseId);
+
+    if (course.teacherId !== teacherId) {
+      throw new ForbiddenException('Only course owner can upload cover');
+    }
+
+    course.cover = {
+      url: file.path,
+      status: ImageStatus.PROCESSING,
+    };
+
+    const savedCourse = await course.save();
+
+    await this.invalidateCourseCache(courseId);
+
+    await this.kafkaService.emit('image.uploaded', {
+      entityType: 'course',
+      entityId: courseId,
+      field: 'cover',
+      originalPath: file.path,
+      originalName: file.originalname,
+      filename: file.filename,
+    });
+
+    return {
+      message: 'Cover uploaded and sent to processing',
+      course: savedCourse,
+    };
   }
 }

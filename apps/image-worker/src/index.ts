@@ -53,3 +53,27 @@ app.listen(port, () => {
 startKafkaConsumer().catch((error) => {
   console.error("Kafka consumer error:", error);
 });
+
+setTimeout(async () => {
+  console.log("TEST IMAGE PROCESSING");
+
+  const sharp = require("sharp");
+
+  const watermark = await sharp("../../uploads/watermark/watermark.png")
+    .resize(150)
+    .png()
+    .toBuffer();
+
+  await sharp("../../uploads/originals/test-cover.jpg")
+    .resize(800)
+    .composite([
+      {
+        input: watermark,
+        gravity: "southeast",
+      },
+    ])
+    .jpeg({ quality: 80 })
+    .toFile("../../uploads/processed/test-cover-processed.jpg");
+
+  console.log("IMAGE PROCESSED");
+}, 3000);
