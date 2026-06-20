@@ -9,13 +9,15 @@ export class KafkaController {
   @Post('test')
   async test() {
     await this.kafkaService.emit('image.uploaded', {
-      type: 'test',
-      message: 'Hello from Main API',
-      createdAt: new Date().toISOString(),
+      entityType: 'course',
+      entityId: 'test-course',
+      field: 'cover',
+      originalPath: '../../uploads/originals/test-cover.jpg',
+      filename: 'test-cover.jpg',
     });
 
     return {
-      message: 'Kafka test event sent',
+      message: 'Kafka image event sent',
     };
   }
 }
